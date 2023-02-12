@@ -13,7 +13,6 @@ def parse():
     # training
     parser.add_argument('-learning_rate', type=float, default=5e-5, help='learning rate')
 
-
     args = parser.parse_args()
     return args
 
