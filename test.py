@@ -33,26 +33,40 @@ import numpy as np
 
 
 # Check Scheduler
-class Net(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Linear(3, 3)
+# class Net(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.net = nn.Linear(3, 3)
     
-    def forward(self, x):
-        return self.net(x)
+#     def forward(self, x):
+#         return self.net(x)
 
 
-net = Net()
+# net = Net()
 
-optimizer = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-4)
+# optimizer = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-4)
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=100, eta_min=0, last_epoch=-1)
+# scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=100, eta_min=0, last_epoch=-1)
 
-for i in range(100):
-    x = torch.randn((5, 3))
-    y = net(x)
-    optimizer.step()
+# for i in range(100):
+#     x = torch.randn((5, 3))
+#     y = net(x)
+#     optimizer.step()
 
-    lr = scheduler.get_lr()[0]
-    print(lr - 1e-3 * 0.5 * (1 + np.cos(i / 100 * np.pi)))
-    scheduler.step()
+#     lr = scheduler.get_lr()[0]
+#     print(lr - 1e-3 * 0.5 * (1 + np.cos(i / 100 * np.pi)))
+#     scheduler.step()
+
+
+# Check nn.Linear
+# B, M, C = 16, 100, 10
+# a = torch.randn((B, M, 3))
+# layer = nn.Linear(3, C, bias=False)
+# b = layer(a)
+# print(b.shape)
+
+# Check Print Format
+a = 0.1
+b = 2
+print(f'{b: d}, {a: .2f}')
+

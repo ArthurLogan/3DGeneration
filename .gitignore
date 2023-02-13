@@ -1,2 +1,8 @@
 .vscode
 .DS_Store
+
+/env
+/curves
+/__pycache__
+
+test.py

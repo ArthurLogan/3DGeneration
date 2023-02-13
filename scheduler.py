@@ -15,7 +15,7 @@ class WarmUpScheduler(_LRScheduler):
         super().__init__(optimizer)
     
     def get_lr(self):
-        """linear interpolate -> after scheluder(cosine annealing)"""
+        """linear interpolate -> after scheluder(cosine annealing etc)"""
         if self.last_epoch > self.total_epoch:
             if self.after_scheduler:
                 if not self.finished:

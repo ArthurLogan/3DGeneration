@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import init
 from torch.nn import functional as F
+import numpy as np
 
 from dgl.geometry import farthest_point_sampler
 
@@ -18,7 +19,8 @@ class Embedding(nn.Module):
         init.xavier_uniform_(self.proj.weight)
     
     def forward(self, x):
-        """[B, 3] -> [B, C]"""
+        """[B, M, 3] -> [B, M, C]"""
+        assert len(x.shape) == 3
         y = self.proj(x)
         return y
 
@@ -42,26 +44,28 @@ class Attention(nn.Module):
         init.xavier_uniform_(self.proj.weight, gain=1e-5)
     
     def forward(self, x, y=None):
-        """cross attention, dimention unchange"""
-        assert len(x.shape) == 2
+        """cross attention query [B, M, C] -> [B, M, C]"""
+        assert len(x.shape) == 3
 
-        # y is None, degenerate to self attention
+        # if y is None, degenerate to self attention
+        # else cross attention
         if y is None:
             y = x
-        assert len(y.shape) == 2 and x.shape[1] == y.shape[1]
+        assert len(y.shape) == 3 and x.shape[2] == y.shape[2]
         
-        B, C = x.shape
-        D, _ = y.shape
+        B, M, C = x.shape
+        _, N, _ = y.shape
         q = self.proj_q(x)
         k = self.proj_k(y)
         v = self.proj_v(y)
 
-        w = torch.mm(q, k.T) * (int(C) ** (-0.5))
-        assert list(w.shape) == [B, D]
+        k = k.permute(0, 2, 1).view(B, C, N)
+        w = torch.bmm(q, k) * (int(C) ** (-0.5))
+        assert list(w.shape) == [B, M, N]
         w = F.softmax(w, dim=-1)
 
-        h = torch.mm(w, v)
-        assert list(h.shape) == [B, C]
+        h = torch.bmm(w, v)
+        assert list(h.shape) == [B, M, C]
         h = self.proj(h)
 
         x = x + h
@@ -103,7 +107,7 @@ class VAE(nn.Module):
         return eps * std + mu
     
     def forward(self, x):
-        """[B, C] -> [B, C_0] -> [B, C]"""
+        """[B, M, C] -> [B, M, C_0] -> [B, M, C]"""
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         out = self.decode(z)
@@ -138,34 +142,41 @@ class SAE(nn.Module):
         self.decoder = nn.Sequential(*[Attention(channels) for _ in range(layers)])
 
         # interpolate
-        self.radial_basis_func = nn.Sequential(
-            Attention(channels),
+        self.radial_basis_func = Attention(channels)
+        self.transform = nn.Sequential(
             nn.Linear(channels, 1),
             nn.Tanh()
         )
 
     def forward(self, x, q):
-        """input point cloud samples [B, 3]"""
-        embed = self.embedder(x)
-
+        """input point cloud samples [B, M, 3]"""
         # partial cross attention
-        idxs = farthest_point_sampler(x)
-        pnts = embed[idxs]
+        batch = x.shape[0]
+        idxs = farthest_point_sampler(x, self.features).cuda()
+        embed = self.embedder(x.cuda())
+        pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
         features = self.encoder(pnts, embed)
+        assert list(features.shape) == [batch, self.features, self.channels]
 
         # kl-regularization block
-        features, mu, logvar = self.regularizer(features)
+        mu, logvar = None, None
+        if self.reg:
+            features, mu, logvar = self.regularizer(features)
 
         # decoder
         features = self.decoder(features)
 
-        q_embed = self.embedder(q)
-        occupancy = self.radial_basis_func(q_embed, features)
+        q_embed = self.embedder(q.cuda())
+        q_output = self.radial_basis_func(q_embed, features)
+        occupancy = self.transform(q_output)
+        occupancy = 0.5 * (occupancy + 1)
+
+        # print(occupancy.min(), occupancy.max())
 
         ret_dict = {
             "regularize_mu": mu,
             "regularize_var": logvar,
-            "occupancy": occupancy
+            "occupancy": occupancy.view(batch, -1)
         }
         
         return ret_dict
