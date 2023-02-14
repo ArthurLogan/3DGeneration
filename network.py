@@ -171,8 +171,6 @@ class SAE(nn.Module):
         occupancy = self.transform(q_output)
         occupancy = 0.5 * (occupancy + 1)
 
-        # print(occupancy.min(), occupancy.max())
-
         ret_dict = {
             "regularize_mu": mu,
             "regularize_var": logvar,

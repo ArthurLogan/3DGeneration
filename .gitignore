@@ -3,6 +3,7 @@
 
 /env
 /curves
+/checkpoints
 /__pycache__
 
 test.py
