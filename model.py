@@ -7,6 +7,16 @@ import numpy as np
 from dgl.geometry import farthest_point_sampler
 
 
+# dictionary
+class Dict(dict):
+    def __getattr__(self, name):
+        return self[name]
+    def __setattr__(self, name, value):
+        self[name] = value
+    def __delattr__(self, name):
+        del self[name]
+
+
 # position embedding
 class Embedding(nn.Module):
     def __init__(self, out_ch):
@@ -115,8 +125,8 @@ class VAE(nn.Module):
 
 
 # shape autoencoder pipeline
-class SAE(nn.Module):
-    def __init__(self, features, channels, layers, reg):
+class ShapeAutoEncoder(nn.Module):
+    def __init__(self, features, channels, layers, reg, device):
         """
         features: number of latent features
         channels: positional encoding dimension
@@ -128,6 +138,7 @@ class SAE(nn.Module):
         self.channels = channels
         self.layers = layers
         self.reg = reg
+        self.device = device
 
         # position encoding
         self.embedder = Embedding(channels)
@@ -152,8 +163,8 @@ class SAE(nn.Module):
         """input point cloud samples [B, M, 3]"""
         # partial cross attention
         batch = x.shape[0]
-        idxs = farthest_point_sampler(x, self.features).cuda()
-        embed = self.embedder(x.cuda())
+        idxs = farthest_point_sampler(x, self.features).to(self.device)
+        embed = self.embedder(x.to(self.device))
         pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
         features = self.encoder(pnts, embed)
         assert list(features.shape) == [batch, self.features, self.channels]
@@ -166,7 +177,7 @@ class SAE(nn.Module):
         # decoder
         features = self.decoder(features)
 
-        q_embed = self.embedder(q.cuda())
+        q_embed = self.embedder(q.to(self.device))
         q_output = self.radial_basis_func(q_embed, features)
         occupancy = self.transform(q_output)
         occupancy = 0.5 * (occupancy + 1)

@@ -1,0 +1,24 @@
+{
+    "num_features": 128,
+    "num_channels": 512,
+    "num_layers": 8,
+    "use_reg": true,
+
+    "epoch": 1000,
+    "batch_size": 32,
+    "learning_rate": 5e-5,
+    "weight_decay": 1e-4,
+    "multiplier": 2,
+
+    "num_samples": 1000,
+    "num_workers": 4,
+    "dataset": "shapenet",
+    "train_root": "/mnt/data/logan/ShapeNet",
+    "val_root": "/mnt/data/logan/ShapeNet",
+
+    "ckpt_dir": "./ckpt",
+    "log_dir": "./log",
+    "test_times": 100,
+
+    "threshold": 0.3
+}

@@ -1,8 +1,9 @@
 .vscode
 .DS_Store
 
-/env
-/curves
-/checkpoints
-/__pycache__
-/test
+env/
+curves/
+ckpt/
+log/
+__pycache__/
+test/
