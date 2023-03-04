@@ -93,29 +93,30 @@ def train(args):
             valid_iou = []
             valid_prec, valid_reca = [], []
 
-            for surfaces, queries, occupancies, images in tqdm(valid_loader):
+            with torch.no_grad():
+                for surfaces, queries, occupancies, images in tqdm(valid_loader):
 
-                # forward
-                res = net(surfaces, queries, device)
+                    # forward
+                    res = net(surfaces, queries, device)
 
-                # loss
-                occupancies = occupancies.to(device)
-                loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
-                loss_bce = bceloss(res['occupancy'], occupancies)
-                loss = loss_bce + loss_reg * args.reg_ratio
+                    # loss
+                    occupancies = occupancies.to(device)
+                    loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
+                    loss_bce = bceloss(res['occupancy'], occupancies)
+                    loss = loss_bce + loss_reg * args.reg_ratio
 
-                # metric
-                out = (res['occupancy'] > args.threshold).int()
-                gt = occupancies.int()
-                metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
+                    # metric
+                    out = (res['occupancy'] > args.threshold).int()
+                    gt = occupancies.int()
+                    metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
 
-                # record
-                iou = metric_outs['iou']
-                prec, reca = metric_outs['pr']
-                valid_loss.append(loss.item())
-                valid_iou.append(iou)
-                valid_prec.append(prec)
-                valid_reca.append(reca)
+                    # record
+                    iou = metric_outs['iou']
+                    prec, reca = metric_outs['pr']
+                    valid_loss.append(loss.item())
+                    valid_iou.append(iou)
+                    valid_prec.append(prec)
+                    valid_reca.append(reca)
 
             summary_writer.add_scalars('loss', dict(valid_loss=torch.mean(valid_loss)), global_step)
             summary_writer.add_scalars('iou', dict(valid_iou=torch.mean(valid_iou)), global_step)
@@ -126,6 +127,8 @@ def train(args):
 
             os.makedirs(args.ckpt_dir, exist_ok=True)
             torch.save(net.state_dict(), f'{args.ckpt_dir}/{i + 1: d}.pt')
+
+    summary_writer.close()
 
     os.makedirs(args.ckpt_dir, exist_ok=True)
     torch.save(net.state_dict(), f'{args.ckpt_dir}/{args.epoch: d}.pt')
