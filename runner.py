@@ -123,7 +123,7 @@ def train(args):
             summary_writer.add_scalars('pr', dict(train_prec=torch.mean(valid_prec), train_reca=torch.mean(valid_reca)), global_step)
 
             avg_loss_ = torch.mean(avg_loss)
-            tqdm.write(f'Average Loss During Last {args.test_times: d} Epoch is {avg_loss_: .6f}')
+            tqdm.write(f'Average Loss During Last {args.test_time: d} Epoch is {avg_loss_: .6f}')
 
             os.makedirs(args.ckpt_dir, exist_ok=True)
             torch.save(net.state_dict(), f'{args.ckpt_dir}/{i + 1: d}.pt')
