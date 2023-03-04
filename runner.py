@@ -10,7 +10,7 @@ from tensorboardX import SummaryWriter
 from model import ShapeAutoEncoder
 from scheduler import WarmUpScheduler
 from loader import load_dataset
-from loss import RegularizeLoss
+from loss import RegularizeLoss, Assert
 from metric import Metric
 
 
@@ -21,6 +21,7 @@ def train(args):
     # dataloader
     train_data, train_loader = load_dataset(args, mode='train')
     valid_data, valid_loader = load_dataset(args, mode='val')
+    print(f"train {len(train_data)}, valid {len(valid_data)}")
 
     # model
     net = ShapeAutoEncoder(args.num_features, args.num_channels, args.num_layers, args.use_reg).to(device)
@@ -35,7 +36,7 @@ def train(args):
     warmUpScheduler = WarmUpScheduler(
         optimizer=optimizer, multiplier=args.multiplier, warm_epoch=args.epoch // 10, after_scheduler=cosineScheduler)
 
-    # loss 
+    # loss
     bceloss = nn.BCELoss().to(device)
     regloss = RegularizeLoss().to(device)
 
@@ -70,10 +71,14 @@ def train(args):
             out = (res['occupancy'] > args.threshold).int()
             gt = occupancies.int()
             metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
+            Assert.check([out, gt])
 
             # write to tensorboard
             iou = metric_outs['iou']
             prec, reca = metric_outs['pr']
+            Assert.check([iou])
+            Assert.check([prec])
+            Assert.check([reca])
             summary_writer.add_scalars('loss', dict(train_loss=loss), global_step)
             summary_writer.add_scalars('iou', dict(train_iou=iou), global_step)
             summary_writer.add_scalars('pr', dict(train_prec=prec, train_reca=reca), global_step)
@@ -84,7 +89,7 @@ def train(args):
 
         warmUpScheduler.step()
 
-        if (i + 1) % args.test_times == 0:
+        if (i + 1) % args.test_time == 0:
             net.eval()
             valid_loss = []
             valid_iou = []

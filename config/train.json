@@ -20,5 +20,5 @@
     "log_dir": "./log",
     "test_time": 100,
 
-    "threshold": 0.3
+    "threshold": 0.2
 }

@@ -153,18 +153,22 @@ class ShapeAutoEncoder(nn.Module):
 
         # interpolate
         self.radial_basis_func = Attention(channels)
-        self.transform = nn.Sequential(
-            nn.Linear(channels, 1),
-            nn.Tanh()
-        )
+        self.transform = nn.Sequential(nn.Linear(channels, 1), nn.Tanh())
+        self.initialize()
+
+    def initialize(self):
+        init.xavier_uniform_(self.transform[0].weight)
+        init.zeros_(self.transform[0].bias)
 
     def forward(self, x, q, device):
         """input point cloud samples [B, M, 3]"""
         # partial cross attention
         batch = x.shape[0]
         idxs = farthest_point_sampler(x, self.features).to(device)
+
         embed = self.embedder(x.to(device))
         pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
+
         features = self.encoder(pnts, embed)
         assert list(features.shape) == [batch, self.features, self.channels]
 
@@ -188,3 +192,15 @@ class ShapeAutoEncoder(nn.Module):
         }
         
         return res_dict
+
+
+if __name__ == '__main__':
+    device = torch.device('cuda:3')
+    net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True).to(device)
+
+    B, M, N = 80, 1024, 2048
+    epoch = 10
+    for i in range(epoch):
+        x = torch.randn((B, M, 3)).clamp(0, 1)
+        q = torch.randn((B, N, 3)).clamp(0, 1)
+        res = net(x, q, device)

@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 
 
 # metric calculator
@@ -19,18 +18,17 @@ class Metric:
     @classmethod
     def _calc_iou(cls, out, gt):
         """[B, N] -> 1"""
-        assert 0 <= out.min() and out.max() <= 1
-        intersection = ((out + gt) == 2).sum(dim=1)
-        union = ((out + gt) > 0).sum(dim=1)
+        intersection = ((out + gt) == 2).int().sum(dim=1)
+        union = ((out + gt) > 0).int().sum(dim=1)
         iou = intersection / union
         return iou.mean()
 
     @classmethod
     def _calc_pr(cls, out, gt):
         """[B, N] -> 1"""
-        intersection = ((out + gt) == 2).sum(dim=1)
-        precision = intersection / (out == 1).sum(dim=1)
-        recall = intersection / (gt == 1).sum(dim=1)
+        intersection = ((out + gt) == 2).int().sum(dim=1)
+        precision = intersection / ((out == 1).int().sum(dim=1) + 1e-5)
+        recall = intersection / ((gt == 1).int().sum(dim=1) + 1e-5)
         return precision.mean(), recall.mean()
 
 

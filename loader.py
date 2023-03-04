@@ -18,7 +18,7 @@ def load_dataset(config, mode):
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=config.num_workers,
             pin_memory=True
         )
@@ -51,7 +51,8 @@ class ShapeNet(Dataset):
         data = np.load(f"{dir}/points.npz")
         positions = data["points"].astype(np.float32)
         occupancies = np.unpackbits(data["occupancies"])[:positions.shape[0]].astype(np.float32)
-        image = np.array(Image.open(np.random.choice(glob.glob(f"{dir}/img_choy2016/*.jpg"))).convert('RGB'), dtype=np.float32)
+        image = Image.open(np.random.choice(glob.glob(f"{dir}/img_choy2016/*.jpg"))).convert('RGB')
+        image = np.array(image, dtype=np.float32)
 
         # at least half postive samples
         half_samples = self.num_samples // 2
