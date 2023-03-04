@@ -126,7 +126,7 @@ class VAE(nn.Module):
 
 # shape autoencoder pipeline
 class ShapeAutoEncoder(nn.Module):
-    def __init__(self, features, channels, layers, reg, device):
+    def __init__(self, features, channels, layers, reg):
         """
         features: number of latent features
         channels: positional encoding dimension
@@ -138,7 +138,6 @@ class ShapeAutoEncoder(nn.Module):
         self.channels = channels
         self.layers = layers
         self.reg = reg
-        self.device = device
 
         # position encoding
         self.embedder = Embedding(channels)
@@ -159,12 +158,12 @@ class ShapeAutoEncoder(nn.Module):
             nn.Tanh()
         )
 
-    def forward(self, x, q):
+    def forward(self, x, q, device):
         """input point cloud samples [B, M, 3]"""
         # partial cross attention
         batch = x.shape[0]
-        idxs = farthest_point_sampler(x, self.features).to(self.device)
-        embed = self.embedder(x.to(self.device))
+        idxs = farthest_point_sampler(x, self.features).to(device)
+        embed = self.embedder(x.to(device))
         pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
         features = self.encoder(pnts, embed)
         assert list(features.shape) == [batch, self.features, self.channels]
@@ -177,15 +176,15 @@ class ShapeAutoEncoder(nn.Module):
         # decoder
         features = self.decoder(features)
 
-        q_embed = self.embedder(q.to(self.device))
+        q_embed = self.embedder(q.to(device))
         q_output = self.radial_basis_func(q_embed, features)
         occupancy = self.transform(q_output)
-        occupancy = 0.5 * (occupancy + 1)
+        occupancy = 0.5 * occupancy + 0.5
 
-        ret_dict = {
+        res_dict = {
             "regularize_mu": mu,
             "regularize_var": logvar,
             "occupancy": occupancy.view(batch, -1)
         }
         
-        return ret_dict
+        return res_dict
