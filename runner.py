@@ -50,8 +50,10 @@ def train(args):
     global_step = 0
     
     # start training
-    net.train()
     for i in range(last_epoch+1, args.epoch):
+
+        net.train()
+
         avg_loss = []
         for surfaces, queries, occupancies, images in tqdm(train_loader):
             optimizer.zero_grad()
@@ -71,7 +73,6 @@ def train(args):
             out = (res['occupancy'] > args.threshold).int()
             gt = occupancies.int()
             metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
-            Assert.check([out, gt])
 
             # write to tensorboard
             iou = metric_outs['iou']
