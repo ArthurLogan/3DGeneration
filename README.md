@@ -8,3 +8,19 @@
 - [ ] [Occupancy Networks: Learning 3D Reconstruction in Function Space](https://arxiv.org/abs/1812.03828)
 - [ ] [DeepSDF: Learning Continuous Signed Distance Functions for Shape Representation](https://arxiv.org/abs/1901.05103)
 - [ ] [NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis](https://arxiv.org/abs/2003.08934)
+
+## 数据集
+
+Occupancy中预处理好的ShapeNet数据集，需要修改config/train.json中的数据集路径。
+
+```bash
+python train.py
+```
+
+## 相关库
+
+通过requirements.txt维护，通过如下命令安装。
+
+```bash
+pip install -r requirements.txt
+```
