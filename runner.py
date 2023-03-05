@@ -115,9 +115,9 @@ def train(args):
                     iou = metric_outs['iou']
                     prec, reca = metric_outs['pr']
                     valid_loss.append(loss.item())
-                    valid_iou.append(iou)
-                    valid_prec.append(prec)
-                    valid_reca.append(reca)
+                    valid_iou.append(iou.item())
+                    valid_prec.append(prec.item())
+                    valid_reca.append(reca.item())
 
             summary_writer.add_scalars('loss', dict(valid_loss=np.mean(valid_loss)), global_step)
             summary_writer.add_scalars('iou', dict(valid_iou=np.mean(valid_iou)), global_step)
