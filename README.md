@@ -19,8 +19,9 @@ python train.py
 
 ## 相关库
 
-通过requirements.txt维护，通过如下命令安装。
+通过Anaconda3维护环境，需要安装conda环境后，通过如下命令安装并进入环境。
 
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate 3DGen
 ```
