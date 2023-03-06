@@ -56,7 +56,8 @@ def train(args):
         net.train()
 
         avg_loss = []
-        for surfaces, queries, occupancies, images in tqdm(train_loader):
+        tqdmloader = tqdm(train_loader)
+        for surfaces, queries, occupancies, images in tqdmloader:
             optimizer.zero_grad()
 
             # forward
@@ -85,6 +86,7 @@ def train(args):
             # record
             avg_loss.append(loss.item())
             global_step += 1
+            tqdmloader.set_postfix(dict(epoch=i, global_step=global_step))
 
         warmUpScheduler.step()
 
