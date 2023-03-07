@@ -79,9 +79,9 @@ def train(args):
             # write to tensorboard
             iou = metric_outs['iou']
             prec, reca = metric_outs['pr']
-            summary_writer.add_scalars('loss', dict(train_loss=loss), global_step)
-            summary_writer.add_scalars('iou', dict(train_iou=iou), global_step)
-            summary_writer.add_scalars('pr', dict(train_prec=prec, train_reca=reca), global_step)
+            summary_writer.add_scalars('loss', dict(train_loss=loss.item()), global_step)
+            summary_writer.add_scalars('iou', dict(train_iou=iou.item()), global_step)
+            summary_writer.add_scalars('pr', dict(train_prec=prec.item(), train_reca=reca.item()), global_step)
 
             # record
             avg_loss.append(loss.item())
