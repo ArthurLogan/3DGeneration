@@ -37,6 +37,7 @@ class WarmUpScheduler(_LRScheduler):
 
 
 if __name__ == '__main__':
+    import os
     import torch
     from torch import optim
     from model import ShapeAutoEncoder
@@ -78,3 +79,4 @@ if __name__ == '__main__':
 
     save()
     load()
+    os.remove(path)
