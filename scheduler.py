@@ -34,3 +34,47 @@ class WarmUpScheduler(_LRScheduler):
                 self.after_scheduler.step(epoch - self.total_epoch)
         else:
             return super().step(epoch)
+
+
+if __name__ == '__main__':
+    import torch
+    from torch import optim
+    from model import ShapeAutoEncoder
+
+    device = torch.device('cuda:3')
+    epoch = 1000
+    path = "./scheduler.pt"
+
+    def demo(scheduler: WarmUpScheduler):
+        for key, val in scheduler.state_dict().items():
+            if isinstance(val, torch.optim.lr_scheduler.CosineAnnealingLR):
+                for k_, v_ in val.state_dict().items():
+                    print(f"{key}/{k_}: {v_}")
+            else:
+                print(f"{key}: {val}")
+        print()
+
+    def save():
+        net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True).to(device)
+        optimizer = torch.optim.AdamW(net.parameters(), lr=5e-5, weight_decay=1e-4)
+        cosineScheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer=optimizer, T_max=epoch, eta_min=0, last_epoch=-1)
+        warmUpScheduler = WarmUpScheduler(
+            optimizer=optimizer, multiplier=2, warm_epoch=epoch // 10, after_scheduler=cosineScheduler)
+        
+        for _ in range(200):
+            warmUpScheduler.step()
+        
+        demo(warmUpScheduler)
+        torch.save(warmUpScheduler.state_dict(), path)
+
+    def load():
+        net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True).to(device)
+        o_ = torch.optim.AdamW(net.parameters(), lr=5e-5, weight_decay=1e-4)
+        c_ = optim.lr_scheduler.CosineAnnealingLR(optimizer=o_, T_max=epoch, eta_min=0, last_epoch=-1)
+        w_ = WarmUpScheduler(optimizer=o_, multiplier=2, warm_epoch=epoch // 10, after_scheduler=c_)
+        w_.load_state_dict(torch.load(path))
+        demo(w_)
+
+    save()
+    load()

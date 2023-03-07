@@ -197,10 +197,5 @@ class ShapeAutoEncoder(nn.Module):
 if __name__ == '__main__':
     device = torch.device('cuda:3')
     net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True).to(device)
-
-    B, M, N = 80, 1024, 2048
-    epoch = 10
-    for i in range(epoch):
-        x = torch.randn((B, M, 3)).clamp(0, 1)
-        q = torch.randn((B, N, 3)).clamp(0, 1)
-        res = net(x, q, device)
+    for key, val in net.state_dict().items():
+        print(f"{key}: {val.shape}")
