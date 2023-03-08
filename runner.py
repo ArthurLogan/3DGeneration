@@ -13,6 +13,7 @@ from scheduler import WarmUpScheduler
 from loader import load_dataset
 from loss import RegularizeLoss
 from metric import Metric
+from utils.checkpoints import CheckpointIO
 
 
 def train(args):
@@ -25,35 +26,42 @@ def train(args):
     print(f"train {len(train_data)}, valid {len(valid_data)}")
 
     # model
-    net = ShapeAutoEncoder(args.num_features, args.num_channels, args.num_layers, args.use_reg).to(device)
+    model = ShapeAutoEncoder(args.model.num_features, args.model.num_channels,
+                             args.model.num_layers, args.model.regularized).to(device)
 
     # gradually warm up opimization
     # SGDR: Stochastic Gradient Descent with Warm Restarts
     # https://github.com/zoubohao/DenoisingDiffusionProbabilityModel-ddpm-/blob/main/Diffusion/Train.py
     optimizer = torch.optim.AdamW(
-        net.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+        model.parameters(), lr=args.training.learning_rate, weight_decay=args.training.weight_decay)
     cosineScheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=optimizer, T_max=args.epoch, eta_min=0, last_epoch=-1)
+        optimizer=optimizer, T_max=args.training.epoch, eta_min=0, last_epoch=-1)
     warmUpScheduler = WarmUpScheduler(
-        optimizer=optimizer, multiplier=args.multiplier, warm_epoch=args.epoch // 10, after_scheduler=cosineScheduler)
+        optimizer=optimizer, multiplier=args.training.multiplier, warm_epoch=args.training.epoch // 10, after_scheduler=cosineScheduler)
+    
+    # checkpoints
+    checkpointIO = CheckpointIO(checkpoint_dir=args.training.ckpt_dir, model=model, scheduler=warmUpScheduler)
+    scalars = dict()
+    if args.training.pretrained:
+        scalars = checkpointIO.load(args.training.ckpt_name)
 
     # loss
     bceloss = nn.BCELoss().to(device)
     regloss = RegularizeLoss().to(device)
 
     # summary writer
-    dirs = glob.glob(f"{args.log_dir}/*")
-    os.makedirs(args.log_dir, exist_ok=True)
-    summary_writer = SummaryWriter(f"{args.log_dir}/{len(dirs)}")
+    dirs = glob.glob(f"{args.training.log_dir}/*")
+    os.makedirs(args.training.log_dir, exist_ok=True)
+    summary_writer = SummaryWriter(f"{args.training.log_dir}/{len(dirs)}")
 
     # process
-    last_epoch = -1
-    global_step = 0
+    last_epoch = scalars.get('last_epoch', -1)
+    global_step = scalars.get('global_step', 0)
     
     # start training
-    for i in range(last_epoch+1, args.epoch):
+    for i in range(last_epoch+1, args.training.epoch):
 
-        net.train()
+        model.train()
 
         avg_loss = []
         tqdmloader = tqdm(train_loader)
@@ -61,18 +69,18 @@ def train(args):
             optimizer.zero_grad()
 
             # forward
-            res = net(surfaces, queries, device)
+            res = model(surfaces, queries, device)
             
             # loss
             occupancies = occupancies.to(device)
             loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
             loss_bce = bceloss(res['occupancy'], occupancies)
-            loss = loss_bce + loss_reg * args.reg_ratio
+            loss = loss_bce + loss_reg * args.training.regularized_ratio
             loss.backward()
             optimizer.step()
 
             # metric
-            out = (res['occupancy'] > args.threshold).int()
+            out = (res['occupancy'] > args.test.threshold).int()
             gt = occupancies.int()
             metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
 
@@ -90,8 +98,8 @@ def train(args):
 
         warmUpScheduler.step()
 
-        if (i + 1) % args.test_time == 0:
-            net.eval()
+        if (i + 1) % args.training.validate_every == 0:
+            model.eval()
             valid_loss = []
             valid_iou = []
             valid_prec, valid_reca = [], []
@@ -100,16 +108,16 @@ def train(args):
                 for surfaces, queries, occupancies, images in tqdm(valid_loader):
 
                     # forward
-                    res = net(surfaces, queries, device)
+                    res = model(surfaces, queries, device)
 
                     # loss
                     occupancies = occupancies.to(device)
                     loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
                     loss_bce = bceloss(res['occupancy'], occupancies)
-                    loss = loss_bce + loss_reg * args.reg_ratio
+                    loss = loss_bce + loss_reg * args.training.regularized_ratio
 
                     # metric
-                    out = (res['occupancy'] > args.threshold).int()
+                    out = (res['occupancy'] > args.test.threshold).int()
                     gt = occupancies.int()
                     metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
 
@@ -126,15 +134,11 @@ def train(args):
             summary_writer.add_scalars('pr', dict(train_prec=np.mean(valid_prec), train_reca=np.mean(valid_reca)), global_step)
 
             avg_loss_ = np.mean(avg_loss)
-            tqdm.write(f'Average Loss During Last {args.test_time: d} Epoch is {avg_loss_: .6f}')
-
-            os.makedirs(args.ckpt_dir, exist_ok=True)
-            torch.save(net.state_dict(), f'{args.ckpt_dir}/{i + 1: d}.pt')
+            tqdm.write(f'Average Loss During Last {args.training.validate_every: d} Epoch is {avg_loss_: .6f}')
+            checkpointIO.save(f'{i+1: d}.pt', last_epoch=i, global_step=global_step)
 
     summary_writer.close()
-
-    os.makedirs(args.ckpt_dir, exist_ok=True)
-    torch.save(net.state_dict(), f'{args.ckpt_dir}/{args.epoch: d}.pt')
+    checkpointIO.save(f'{i+1: d}.pt', last_epoch=i, global_step=global_step)
 
 
 def eval(args):

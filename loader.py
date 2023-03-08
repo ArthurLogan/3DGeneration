@@ -7,25 +7,25 @@ import glob
 from dgl.geometry import farthest_point_sampler
 
 
-def load_dataset(config, mode):
-    if config.dataset == "shapenet":
-        batch_size = config.batch_size if mode != 'val' else 32
+def load_dataset(args, mode):
+    if args.data.dataset == "shapenet":
+        batch_size = args.training.batch_size if mode != 'val' else 32
         dataset = ShapeNet(
-            config.data_dir,
+            args.data.dataset_dir,
             mode,
-            config.num_samples
+            args.data.num_samples
         )
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=config.num_workers,
+            num_workers=args.data.num_workers,
             pin_memory=True
         )
         return dataset, dataloader
     
     else:
-        raise Exception(f'Unsupported dataset: {config.dataset}')
+        raise Exception(f'Unsupported dataset: {args.data.dataset}')
 
 
 # iterable dataset
