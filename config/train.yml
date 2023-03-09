@@ -12,13 +12,13 @@ test:
   threshold: 0.2
 training:
   batch_size: 160
-  epoch: 10
+  epoch: 1000
   learning_rate: 5.0e-05
   log_dir: ./log
   multiplier: 2
   ckpt_dir: ./ckpt
   ckpt_name: null
   pretrained: false
-  validate_every: 2
+  validate_every: 100
   weight_decay: 0.0001
   regularized_ratio: 0.001
