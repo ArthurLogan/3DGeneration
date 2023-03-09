@@ -157,13 +157,13 @@ class ShapeAutoEncoder(nn.Module):
         init.xavier_uniform_(self.transform[0].weight)
         init.zeros_(self.transform[0].bias)
 
-    def forward(self, x, q, device):
+    def forward(self, x, q):
         """input point cloud samples [B, M, 3]"""
         # partial cross attention
         batch = x.shape[0]
-        idxs = farthest_point_sampler(x, self.features).to(device)
+        idxs = farthest_point_sampler(x, self.features)
 
-        embed = self.embedder(x.to(device))
+        embed = self.embedder(x)
         pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
 
         features = self.encoder(pnts, embed)
@@ -177,7 +177,7 @@ class ShapeAutoEncoder(nn.Module):
         # decoder
         features = self.decoder(features)
 
-        q_embed = self.embedder(q.to(device))
+        q_embed = self.embedder(q)
         q_output = self.radial_basis_func(q_embed, features)
         occupancy = self.transform(q_output)
         occupancy = 0.5 * occupancy + 0.5

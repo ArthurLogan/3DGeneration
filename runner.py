@@ -65,14 +65,18 @@ def train(args):
 
         avg_loss = []
         tqdmloader = tqdm(train_loader)
-        for surfaces, queries, occupancies, images in tqdmloader:
+        for surfaces, queries, occupancies in tqdmloader:
             optimizer.zero_grad()
 
+            # data transport
+            surfaces = surfaces.to(device)
+            queries = queries.to(device)
+            occupancies = occupancies.to(device)
+
             # forward
-            res = model(surfaces, queries, device)
+            res = model(surfaces, queries)
             
             # loss
-            occupancies = occupancies.to(device)
             loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
             loss_bce = bceloss(res['occupancy'], occupancies)
             loss = loss_bce + loss_reg * args.training.regularized_ratio
@@ -105,13 +109,17 @@ def train(args):
             valid_prec, valid_reca = [], []
 
             with torch.no_grad():
-                for surfaces, queries, occupancies, images in tqdm(valid_loader):
+                for surfaces, queries, occupancies in tqdm(valid_loader):
+
+                    # data transport
+                    surfaces = surfaces.to(device)
+                    queries = queries.to(device)
+                    occupancies = occupancies.to(device)
 
                     # forward
                     res = model(surfaces, queries, device)
 
                     # loss
-                    occupancies = occupancies.to(device)
                     loss_reg = regloss(res['regularize_mu'], res['regularize_var'])
                     loss_bce = bceloss(res['occupancy'], occupancies)
                     loss = loss_bce + loss_reg * args.training.regularized_ratio
