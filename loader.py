@@ -6,9 +6,6 @@ import glob
 
 from dgl.geometry import farthest_point_sampler
 
-# distributed sampler
-from torch.utils.data.distributed import DistributedSampler
-
 
 def load_dataset(args, mode):
     if args.data.dataset == "shapenet":
@@ -18,14 +15,10 @@ def load_dataset(args, mode):
             mode=mode,
             num_samples=args.data.num_samples
         )
-        datasampler = DistributedSampler(
-            dataset=dataset
-        )
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=False,
-            sampler=datasampler,
             num_workers=args.data.num_workers,
             pin_memory=True
         )
