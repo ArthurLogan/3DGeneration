@@ -52,8 +52,8 @@ class ShapeNet(Dataset):
         data = np.load(f"{dir}/points.npz")
         positions = data["points"].astype(np.float32)
         occupancies = np.unpackbits(data["occupancies"])[:positions.shape[0]].astype(np.float32)
-        image = Image.open(np.random.choice(glob.glob(f"{dir}/img_choy2016/*.jpg"))).convert('RGB')
-        image = np.array(image, dtype=np.float32)
+        # image = Image.open(np.random.choice(glob.glob(f"{dir}/img_choy2016/*.jpg"))).convert('RGB')
+        # image = np.array(image, dtype=np.float32)
 
         # at least half postive samples
         half_samples = self.num_samples // 2
@@ -79,4 +79,4 @@ class ShapeNet(Dataset):
         queries = positions[indices]
         occupancies = occupancies[indices]
 
-        return surfaces, queries, occupancies, image
+        return surfaces, queries, occupancies #, image

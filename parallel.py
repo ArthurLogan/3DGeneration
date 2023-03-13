@@ -13,7 +13,7 @@ from scheduler import WarmUpScheduler
 from loader import load_dataset
 from loss import RegularizeLoss
 from metric import Metric
-from utils.checkpoints import CheckpointIO
+from checkpoints import CheckpointIO
 
 # torch lightning training
 from pytorch_lightning.lite import LightningLite

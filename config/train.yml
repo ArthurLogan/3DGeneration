@@ -7,23 +7,37 @@ autoencoder:
   regularize: true
 data:
   dataset: shapenet
-  dataset_dir: /home/storage/logan/ShapeNet
+  dataset_dir: /mnt/data/logan/ShapeNet
   num_samples: 2048
-  num_workers: 4
+  num_workers: 12
 denoiser:
   model_name: null
   num_channels: 32
   num_layers: 8
   pretrained: false
+diffusion:
+  T: 1000
+  batch_size: 160
+  beta_1: 0.0001
+  beta_T: 0.02
+  epoch: 1000
+  grad_clip: 1.0
+  learning_rate: 0.0001
+  multiplier: 2.0
+  weight_decay: 0.0001
 log:
   ckpt_dir: ./ckpt
   log_dir: ./log
   validate_every: 100
 test:
+  eta: 1.0
   threshold: 0.2
+  time_schedule: uniform
+  timesteps: 1000
 train:
   batch_size: 160
   epoch: 1000
+  grad_clip: 1.0
   learning_rate: 5.0e-05
   multiplier: 2.0
   regularize_ratio: 0.001

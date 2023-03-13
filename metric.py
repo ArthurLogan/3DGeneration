@@ -36,6 +36,4 @@ if __name__ == '__main__':
     out = (torch.randn((2, 3)) > 0).int()
     gt = torch.stack([out[0], torch.randn(3) > 0], dim=0).int()
     metric_outs = Metric.get(out, gt, metrics=['iou', 'pr'])
-    print(out)
-    print(gt)
-    print(metric_outs)
+    print(out, gt, metric_outs)
