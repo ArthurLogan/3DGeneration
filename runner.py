@@ -133,7 +133,7 @@ def train_step(train_loader, model, criterion, optimizer, epoch, args):
         # metric
         pred = (res['occupancy'] > args['test']['threshold']).int()
         gt = occupancies.int()
-        metrics = Metric.get(pred, gt, metrics=['iou', 'gt'])
+        metrics = Metric.get(pred, gt, metrics=['iou', 'pr'])
         iou = metrics['iou']
         prec, reca = metrics['pr']
 
@@ -176,7 +176,7 @@ def valid_step(valid_loader, model, criterion, optimizer, epoch, args):
             # metric
             pred = (res['occupancy'] > args['test']['threshold']).int()
             gt = occupancies.int()
-            metrics = Metric.get(pred, gt, metrics=['iou', 'gt'])
+            metrics = Metric.get(pred, gt, metrics=['iou', 'pr'])
             iou = metrics['iou']
             prec, reca = metrics['pr']
 
