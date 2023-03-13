@@ -1,24 +1,30 @@
-data:
-  dataset: shapenet
-  dataset_dir: /mnt/data/logan/ShapeNet
-  num_samples: 2048
-  num_workers: 4
-model:
+autoencoder:
+  model_name: null
   num_channels: 512
   num_features: 128
   num_layers: 8
-  regularized: true
+  pretrained: false
+  regularize: true
+data:
+  dataset: shapenet
+  dataset_dir: /home/storage/logan/ShapeNet
+  num_samples: 2048
+  num_workers: 4
+denoiser:
+  model_name: null
+  num_channels: 32
+  num_layers: 8
+  pretrained: false
+log:
+  ckpt_dir: ./ckpt
+  log_dir: ./log
+  validate_every: 100
 test:
   threshold: 0.2
-training:
+train:
   batch_size: 160
   epoch: 1000
   learning_rate: 5.0e-05
-  log_dir: ./log
-  multiplier: 2
-  ckpt_dir: ./ckpt
-  ckpt_name: null
-  pretrained: false
-  validate_every: 100
+  multiplier: 2.0
+  regularize_ratio: 0.001
   weight_decay: 0.0001
-  regularized_ratio: 0.001

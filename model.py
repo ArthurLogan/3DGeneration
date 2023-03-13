@@ -7,13 +7,6 @@ import numpy as np
 from dgl.geometry import farthest_point_sampler
 
 
-# dictionary
-class Dict(dict):
-    def __setattr__(self, name, value): self[name] = value
-    def __getattr__(self, name): return self[name]
-    def __delattr__(self, name): del self[name]
-
-
 # position embedding
 class Embedding(nn.Module):
     def __init__(self, out_ch):
@@ -118,23 +111,22 @@ class VAE(nn.Module):
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         out = self.decode(z)
-        return out, mu, log_var
+        return out, z, mu, log_var
 
 
 # shape autoencoder pipeline
 class ShapeAutoEncoder(nn.Module):
-    def __init__(self, features, channels, layers, reg):
+    def __init__(self, features, channels, layers, reg_channels):
         """
         features: number of latent features
         channels: positional encoding dimension
         layers: number of attention layer in decoder
-        reg: if use kl-regularization
+        reg_channels: kl-regularization latent channels
         """
         super().__init__()
         self.features = features
         self.channels = channels
         self.layers = layers
-        self.reg = reg
 
         # position encoding
         self.embedder = Embedding(channels)
@@ -143,7 +135,7 @@ class ShapeAutoEncoder(nn.Module):
         self.encoder = Attention(channels)
 
         # kl regularizer
-        self.regularizer = VAE(channels, 32)
+        self.regularizer = VAE(channels, reg_channels)
 
         # decoder
         self.decoder = nn.Sequential(*[Attention(channels) for _ in range(layers)])
@@ -157,8 +149,8 @@ class ShapeAutoEncoder(nn.Module):
         init.xavier_uniform_(self.transform[0].weight)
         init.zeros_(self.transform[0].bias)
 
-    def forward(self, x, q):
-        """input point cloud samples [B, M, 3]"""
+    def encode(self, x):
+        """input point cloud samples [B, M, 3] encode to [B, N, C]"""
         # partial cross attention
         batch = x.shape[0]
         idxs = farthest_point_sampler(x, self.features)
@@ -166,33 +158,55 @@ class ShapeAutoEncoder(nn.Module):
         embed = self.embedder(x)
         pnts = embed[np.array([[i] * self.features for i in range(batch)]), idxs]
 
+        # encoder
         features = self.encoder(pnts, embed)
         assert list(features.shape) == [batch, self.features, self.channels]
 
         # kl-regularization block
-        mu, logvar = None, None
-        if self.reg:
-            features, mu, logvar = self.regularizer(features)
+        features, latents, mu, logvar = self.regularizer(features)
+        return features, latents, mu, logvar
 
+    def decode(self, feat, q):
+        """input encoded features [B, N, C] decode to  occupancies [B, M]"""
         # decoder
-        features = self.decoder(features)
+        features = self.decoder(feat)
 
+        # cross attention
         q_embed = self.embedder(q)
         q_output = self.radial_basis_func(q_embed, features)
         occupancy = self.transform(q_output)
         occupancy = 0.5 * occupancy + 0.5
+        return occupancy
 
+    def forward(self, x, q):
+        """input point cloud samples [B, M, 3]"""
+        features, _, mu, logvar = self.encode(x)
+        occupancy = self.decode(features, q)
         res_dict = {
             "regularize_mu": mu,
             "regularize_var": logvar,
-            "occupancy": occupancy.view(batch, -1)
+            "occupancy": occupancy.view(x.shape[0], -1)
         }
-        
         return res_dict
+    
+
+# shape diffusion processor
+class ShapeDenoiser(nn.Module):
+    def __init__(self, channels, layers):
+        self.denoiser = nn.Sequential(*[Attention(channels) for _ in range(layers * 2)])
+    
+    def forward(self, x, cond=None):
+        """[B, M, C] -> [B, M, C]"""
+        y = x
+        for i, module in enumerate(self.denoiser):
+            if i % 2 == 0:
+                y = module(y)
+            else:
+                y = module(y, cond)
+        return y
 
 
 if __name__ == '__main__':
-    device = torch.device('cuda:3')
-    net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True).to(device)
+    net = ShapeAutoEncoder(features=128, channels=512, layers=8, reg=True, reg_channels=32).cuda()
     for key, val in net.state_dict().items():
         print(f"{key}: {val.shape}")

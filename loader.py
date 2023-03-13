@@ -8,24 +8,25 @@ from dgl.geometry import farthest_point_sampler
 
 
 def load_dataset(args, mode):
-    if args.data.dataset == "shapenet":
-        batch_size = args.training.batch_size if mode != 'val' else 32
+    dataset_type = args['data']['dataset']
+    if dataset_type == "shapenet":
+        batch_size = args['train']['batch_size'] if mode != 'val' else 32
         dataset = ShapeNet(
-            root=args.data.dataset_dir,
+            root=args['data']['dataset_dir'],
             mode=mode,
-            num_samples=args.data.num_samples
+            num_samples=args['data']['num_samples']
         )
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=batch_size,
-            shuffle=False,
-            num_workers=args.data.num_workers,
+            shuffle=(mode=='train'),
+            num_workers=args['data']['num_workers'],
             pin_memory=True
         )
         return dataset, dataloader
     
     else:
-        raise Exception(f'Unsupported dataset: {args.data.dataset}')
+        raise Exception(f'Unsupported dataset: {dataset_type}')
 
 
 # iterable dataset
@@ -51,6 +52,8 @@ class ShapeNet(Dataset):
         data = np.load(f"{dir}/points.npz")
         positions = data["points"].astype(np.float32)
         occupancies = np.unpackbits(data["occupancies"])[:positions.shape[0]].astype(np.float32)
+        image = Image.open(np.random.choice(glob.glob(f"{dir}/img_choy2016/*.jpg"))).convert('RGB')
+        image = np.array(image, dtype=np.float32)
 
         # at least half postive samples
         half_samples = self.num_samples // 2
@@ -76,4 +79,4 @@ class ShapeNet(Dataset):
         queries = positions[indices]
         occupancies = occupancies[indices]
 
-        return surfaces, queries, occupancies
+        return surfaces, queries, occupancies, image
