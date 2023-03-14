@@ -7,10 +7,9 @@ import glob
 from dgl.geometry import farthest_point_sampler
 
 
-def load_dataset(args, mode):
+def load_dataset(args, mode, batch_size):
     dataset_type = args['data']['dataset']
     if dataset_type == "shapenet":
-        batch_size = args['train']['batch_size'] if mode != 'val' else 32
         dataset = ShapeNet(
             root=args['data']['dataset_dir'],
             mode=mode,

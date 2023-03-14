@@ -193,6 +193,7 @@ class ShapeAutoEncoder(nn.Module):
 # shape diffusion processor
 class ShapeDenoiser(nn.Module):
     def __init__(self, channels, layers):
+        super().__init__()
         self.denoiser = nn.Sequential(*[Attention(channels) for _ in range(layers * 2)])
     
     def forward(self, x, cond=None):

@@ -1,15 +1,15 @@
 autoencoder:
-  model_name: null
+  model_name: ae.pt
   num_channels: 512
-  num_features: 128
+  num_features: 512
   num_layers: 8
   pretrained: false
   regularize: true
 data:
   dataset: shapenet
-  dataset_dir: /mnt/data/logan/ShapeNet
+  dataset_dir: /home/storage/logan/ShapeNet
   num_samples: 2048
-  num_workers: 12
+  num_workers: 6
 denoiser:
   model_name: null
   num_channels: 32
@@ -17,7 +17,7 @@ denoiser:
   pretrained: false
 diffusion:
   T: 1000
-  batch_size: 160
+  batch_size: 80
   beta_1: 0.0001
   beta_T: 0.02
   epoch: 1000
@@ -35,7 +35,7 @@ test:
   time_schedule: uniform
   timesteps: 1000
 train:
-  batch_size: 160
+  batch_size: 200
   epoch: 1000
   grad_clip: 1.0
   learning_rate: 5.0e-05

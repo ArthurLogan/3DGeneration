@@ -21,6 +21,7 @@ from checkpoints import CheckpointIO
 def train(args):
     """train autoencoder & denoiser"""
     train_autoencoder(args)
+    # train_denoiser(args)
 
 
 def train_autoencoder(args):
@@ -28,8 +29,8 @@ def train_autoencoder(args):
     torch.cuda.set_device(args['device'])
 
     # dataloader
-    train_data, train_loader = load_dataset(args, mode='train')
-    valid_data, valid_loader = load_dataset(args, mode='val')
+    train_data, train_loader = load_dataset(args, mode='train', batch_size=args['train']['batch_size'])
+    valid_data, valid_loader = load_dataset(args, mode='val', batch_size=32)
     print(f'train {len(train_data)}, valid {len(valid_data)}')
 
     # autoencoder
@@ -64,9 +65,9 @@ def train_autoencoder(args):
     criterion = lambda out, gt, mu, logvar: bceloss(out, gt) + regloss(mu, logvar) * args['train']['regularize_ratio']
 
     # summary writer
-    dirs = glob.glob(f"{args['log']['log_dir']}/*")
+    dirs = glob.glob(f"{args['log']['log_dir']}/AE_*")
     os.makedirs(args['log']['log_dir'], exist_ok=True)
-    summary_writer = SummaryWriter(f"{args['log']['log_dir']}/{len(dirs)}")
+    summary_writer = SummaryWriter(f"{args['log']['log_dir']}/AE_{len(dirs)}")
 
     # process
     last_epoch = scalars.get('last_epoch', -1)
@@ -202,8 +203,8 @@ def train_denoiser(args):
     torch.cuda.set_device(args['device'])
 
     # dataloader
-    train_data, train_loader = load_dataset(args, mode='train')
-    valid_data, valid_loader = load_dataset(args, mode='val')
+    train_data, train_loader = load_dataset(args, mode='train', batch_size=args['diffusion']['batch_size'])
+    valid_data, valid_loader = load_dataset(args, mode='val', batch_size=32)
     print(f'train {len(train_data)}, valid {len(valid_data)}')
 
     # autoencoder & denoiser
@@ -237,13 +238,17 @@ def train_denoiser(args):
     encoderIO = CheckpointIO(args['log']['ckpt_dir'], model=encoder)
     encoderIO.load(args['autoencoder']['model_name'])
 
+    # freeze encoder
+    for module in encoder.parameters():
+        module.requires_grad = False
+
     scalars = dict()
     if args['denoiser']['pretrained']:
         checkpointIO = CheckpointIO(args['log']['ckpt_dir'], model=model, scheduler=warmUpScheduler)
         scalars = checkpointIO.load(args['log']['ckpt_dir'])
 
     # summary writer
-    dirs = glob.glob(f"{args['log']['log_dir']}/*")
+    dirs = glob.glob(f"{args['log']['log_dir']}/Diff_*")
     os.makedirs(args['log']['log_dir'], exist_ok=True)
     summary_writer = SummaryWriter(f"{args['log']['log_dir']}/Diff_{len(dirs)}")
 
@@ -289,6 +294,8 @@ def train_dm_step(train_loader, embedder, model, optimizer, epoch, args):
         # data transport & forward
         surfaces = surfaces.cuda()
         feats, latents, mu, logvar = embedder.encode(surfaces)
+
+        print(latents.shape)
 
         # loss
         loss = model(latents)
